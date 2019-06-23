@@ -32,15 +32,37 @@ Als Vorbereitung habe ich drei Debian Stretch VMs installiert:
 Als erstes fügen wir das [Repository](https://downloads.mariadb.org/mariadb/repositories/#mirror=host-europe) von MariaDB hinzu, da das von Debian schon etwas älter ist:
 
 ```sh
-$ sudo apt-get install software-properties-common dirmngr
+$ sudo apt install software-properties-common dirmngr
 $ sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
-$ sudo add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://ftp.hosteurope.de/mirror/mariadb.org/repo/10.4/debian stretch main'
+$ sudo add-apt-repository 'deb [arch=amd64] http://ftp.hosteurope.de/mirror/mariadb.org/repo/10.4/debian stretch main'
 ```
 
-Wir verwenden einen Server in Deutschland und müssen dann nur noch die passenden Pakete installieren:
+Bevor die Pakete installiert werden, bereiten wir ein paar Verzeichnisse vor. In der Standardeinstellung werden die Datenbanken in `/var/lib/mysql` gespeichert. Hier wollen wir sie aber nach `/opt/mariadb/mysql` speichern.
+Damit haben wir eine bessere Kontrolle und können im Bedarfsfall Snapshots von nur diesem Verzeichnis (Mountpoint) erstellen:
 
 ```sh
-$ sudo apt-get update
-$ sudo apt-get install mariadb-server
+$ sudo mkdir -p /opt/mariadb/
+$ sudo lvcreate -n mariadbfs -L 1G db-vg
+$ sudo mkfs.ext4 /dev/db-vg/mariadbfs
+$ echo '/dev/mapper/db--vg-mariadbfs /opt/mariadb ext4 noatime,defaults 0 2' | sudo tee -a /etc/fstab > /dev/null
+$ sudo mount /opt/mariadb
+$ sudo mkdir /opt/mariadb/{tmp,mysql}
+```
+
+* Hier passiert nun folgendes:
+  * `/opt/mariadb/` Verzeichnis erstellen
+  * Logical Volume mit der Größe von 1GB erzeugen mit dem Namen "`mariadbfs`" aus der Volume Gruppe `db-vg`
+  * Das neu erstellte LV mit dem Dateisysten EXT4 formatieren
+  * Den dazu passenden `/etc/fstab` Eintrag erzeugen
+  * Das LV einhängen
+  * Das Verzeichnis `tmp` erstellen, welches von MariaDB genutzt wird
+  * das Verzeichnis `mysql` erstellen, in dem dann alle Datenbanken landen
+
+Wichtig ist an dieser Stelle nur, dass das neue Dateisystem **vorher** eingehangen wurde, andernfalls wären die neu erstellten Ordner nicht mehr greifbar.\
+Nun reichen zwei Pakete aus, um alle wichtigen Dienste und Programme auf die Server zu bringen: 
+
+```sh
+$ sudo apt update
+$ sudo apt install mariadb-server galera-4
 ```
 
