@@ -1,3 +1,46 @@
-baseURL = "http://example.org/"
+baseurl = "https://www.pug.org/doc/"
+contentdir    = "content"
+layoutdir     = "layouts"
+publishdir    = "public"
+title = "PUG Dokumentation"
+canonifyurls  = false
+metaDataFormat = "yaml"
+relativeURLs = false
+
 languageCode = "en-us"
-title = "My New Hugo Site"
+DefaultContentLanguage = "de"
+theme = "docdock"
+themesdir = "themes/"
+pygmentsCodeFences = true
+pygmentsStyle = "friendly"
+
+defaultContentLanguage = "de"
+defaultContentLanguageInSubdir= false
+enableMissingTranslationPlaceholders = false
+
+paginate = 10
+
+[params]
+editURL = "https://github.com/pug.org/doc"
+showVisitedLinks = true # default is false
+themeStyle = "flex" # "original" or "flex" # default "flex"
+themeVariant = "" # choose theme variant "green", "gold" , "gray", "blue" (default)
+ordersectionsby = "weight" # ordersectionsby = "title"
+disableHomeIcon = false # default is false
+disableSearch = true # default is false
+disableNavChevron = false # set true to hide next/prev chevron, default is false
+highlightClientSide = false # set true to use highlight.pack.js instead of the default hugo chroma highlighter
+menushortcutsnewtab = false # set true to open shortcuts links to a new tab/window
+enableGitInfo = true
+customCSS = ["css/custom.css"]
+
+[outputs]
+home = [ "HTML","JSON","RSS"]
+
+
+[[menu.shortcuts]]
+pre = "<h3>More</h3>"
+name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
+identifier = "ds"
+url = "https://github.com/"
+weight = 10
