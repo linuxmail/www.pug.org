@@ -1,1 +1,1 @@
-![Pug Logo](uploads/Puglogo-400.png?height=300px)
+![Pug Logo](/doc/uploads/Puglogo-400.png?height=300px)
