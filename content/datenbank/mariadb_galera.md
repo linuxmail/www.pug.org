@@ -32,15 +32,15 @@ Als Vorbereitung habe ich drei Debian Stretch VMs installiert:
 Als erstes fügen wir das [Repository](https://downloads.mariadb.org/mariadb/repositories/#mirror=host-europe) von MariaDB hinzu, da das von Debian schon etwas älter ist:
 
 ```sh
-sudo apt-get install software-properties-common dirmngr
-sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
-sudo add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://ftp.hosteurope.de/mirror/mariadb.org/repo/10.4/debian stretch main'
+$ sudo apt-get install software-properties-common dirmngr
+$ sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xF1656F24C74CD1D8
+$ sudo add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://ftp.hosteurope.de/mirror/mariadb.org/repo/10.4/debian stretch main'
 ```
 
 Wir verwenden einen Server in Deutschland und müssen dann nur noch die passenden Pakete installieren:
 
 ```sh
-sudo apt-get update
-sudo apt-get install mariadb-server
+$ sudo apt-get update
+$ sudo apt-get install mariadb-server
 ```
 
