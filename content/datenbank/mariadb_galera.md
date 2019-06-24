@@ -105,15 +105,16 @@ $ sudo chown mysql: -R /opt/mariadb/
 $ sudo systemctl stop mariadb 
 $ sudo mv /var/lib/mysql/* /opt/mariadb/mysql/
 ```
+Nun folgt die Konfiguration, welche von [hier entliehen](https://community.icinga.com/t/galera-mysql-cluster-with-vips-and-haproxy-for-ido-mysql-and-more/407#configure-the-galera-cluster) wurde, aber ein wenig angepasst und von Kommentaren befreit. Es gibt nur vier Änderungen:
 
-Nun folgt die Konfiguration, welche von hier entliehen wurde, aber ein wenig angepasst und um die Kommentare entschlackt. Es gibt nur zwei Änderungen:
+- bind-address - externe IP Adresse
+- wsrep\_node\_address - interne Cluster IP Adresse
+- datadir - wo landen die Datenbanken
+- tmpdir - wo ist das temporäre Verzeichnis
 
-* datadir - wo landen die Datenbanken
-* tmpdir - wo ist das temporäre Verzeichnis
+```cfg
+# office-ffm-db-01:/etc/mysql/my.cnf
 
-* **Exemplarisch für office-ffm-db-01:/etc/mysql/my.cnf**
-
-```
 # based on https://community.icinga.com/t/galera-mysql-cluster-with-vips-and-haproxy-for-ido-mysql-and-more/407#install-mariadb--galera-cluster-filesets
 
 [server]
@@ -140,6 +141,11 @@ wsrep_provider=/usr/lib64/galera/libgalera_smm.so
 wsrep_sst_method=rsync
 wsrep_slave_threads=2
 
+# Which node to choose, if SST is required
+# default should be null, or a dedicated node (name, NOT IP)
+# wsrep_sst_donor=office-ffm-db-03 
+# wsrep_sst_donor=null
+
 # SSL for Galera, but disabled
 # wsrep_provider_options="socket.ssl_key=/etc/mysql/ssl/  server-key.pem;socket.ssl_cert=/etc/mysql/ssl/server-cert.pem;socket.ssl_ca=/etc/mysql/ssl/ca-cert.pem"
 
@@ -156,7 +162,82 @@ wsrep_cluster_address='gcomm://172.25.50.30,172.25.50.31,172.25.50.32'
 [mariadb-10.4]
 ```
 
+Für die anderen Knoten muss entsprechend die IP Adresse (bind-address / wsrep\_node\_address) und der Name (wsrep\_node\_name) angepasst werden.
 
-Für die anderen Knoten  muss entsprechend die IP Adresse (bind-address / wsrep_node_address) und der Name (wsrep_node_name) angepasst werden. 
+#### Cluster Initialisierung
 
+Nachdem nun die Konfiguration auf allen drei Knoten hinterlegt wurde, kann auf einem Knoten MariaDB gestartet werden, allerdings mit einem speziellen Kommando, welches den Galera Cluster sozusagen initialisiert: `galera_new_cluster`
 
+Das Kommando forciert den Start des ersten Cluster Knotens. Würde das reguläre `systemctl start mariadb` verwendet werden, würde nach den in der Konfiguration hinterlegten anderen Nodes geschaut werden, ob es einen "Donor" gibt. Da das zu diesem Zeitpunkt nicht der Fall ist, würde der Start abbrechen.
+
+Ein erfolgreicher Start sieht dann zumeist so aus:
+
+```bash
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 0 [Note] WSREP: Member 0.0 (ffm-office-db-01) synced with group.
+```
+
+Starten wir nun einen weitere beliebigen Knoten, wird dieser den Donor finden und sich bei ihm melden:
+
+```bash
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 0 [Note] WSREP: Shifting JOINED -> SYNCED (TO: 2)
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 3 [Note] WSREP: Server ffm-office-db-01 synced with group
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 3 [Note] WSREP: Server status change joined -> synced
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 3 [Note] WSREP: Synchronized with group, ready for connections
+Jun 23 19:28:47 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:47 3 [Note] WSREP: wsrep_notify_cmd is not defined, skipping notification.
+Jun 23 19:28:48 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:48 0 [Note] WSREP: (4e0d80e8, 'tcp://0.0.0.0:4567') turning message relay requesting off
+Jun 23 19:28:49 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:49 0 [Note] WSREP: async IST sender served
+Jun 23 19:28:49 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:49 0 [Note] WSREP: 1.0 (ffm-office-db-02): State transfer from 0.0 (ffm-office-db-01) complete.
+Jun 23 19:28:49 office-ffm-db-01 mysqld[4857]: 2019-06-23 19:28:49 0 [Note] WSREP: Member 1.0 (ffm-office-db-02) synced with group.
+```
+
+Der Knoten `ffm-office-db-02` hat sich also angemeldet und die bestehenden Datenbanken wurden per `rsync` übertragen.
+
+Damit haben wir nun einen funktionieren Datenbank Cluster
+
+#### Cluster SST per mariabackup
+
+Wenn ein Datenbank Knoten aus dem Cluster "herausgefallen" ist und erneut eingebunden wird, gibt es zwei Möglichkeiten um den aktuellen Stand zu syncronisieren:
+
+* IST - [Incremental State Transfers](http://galeracluster.com/library/documentation/state-transfer.html#state-transfer-ist)
+* SST - [State Snapshot Transfers](http://galeracluster.com/library/documentation/state-transfer.html#state-transfer-sst)
+
+MariaDB hält in einem [Zwischenspeicher](http://galeracluster.com/library/documentation/galera-parameters.html#gcache-size) die geänderten Daten vor, welche für einen IST Transfer verwendet werden. Ist dieser Zwischenspeicher voll, wird stattdessen ein SST durchgeführt.\
+Ein SST überträgt erneut alle Datenbanken. Je nach Umfang der Daten können das von wenige Sekunden, bis hin zu vielen Stunden dauern, abhängig von der Bandbreite, verbaute Festplatten etc. pp.\
+Ein großes Problem bei der Methode über `rsync` ist der, dass der genutzte Donor vollständig blockiert wird. Der Donor Knoten wird als Quelle für den Transfer der Daten verwendet. In einem drei Knoten Cluster, wäre im Fall der Fälle nur noch ein Knoten für Applikationen verfügbar.
+
+Dieses Problem lässt sich entschärfen, wenn als Methode `mariabackup` eingesetzt wird. Diese Methode ist ein Fork von xtrabackup-v2. Damit werden die Daten nicht per `rsync`, sondern mittels `socat` übertragen (sozusagen `cat` für das Netzwerk) und per `mariabackup` übergeben.
+
+Bei einem SST wird dann nur die jeweilige Datenbank blockiert, nicht jedoch der gesamte Knoten.\
+Dafür bedarf es eines speziellen Datenbank Nutzers und die jeweiligen Pakete auf alles Knoten. Um es einfach zu halten, verwenden wir die Benutzer:Passwort Variation:
+
+* Anpassen der Konfiguration
+
+```cfg
+[mariadb]
+...
+wsrep_sst_method = mariabackup
+wsrep_sst_auth = mariabackup:mypassword
+
+[sst]
+sst-syslog=1
+```
+
+* MariaDB Benutzer mit passenden Rechten erstellen
+
+```mysql
+root@office-ffm-db-01:[~]: mysql
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 14
+Server version: 10.4.6-MariaDB-1:10.4.6+maria~stretch mariadb.org binary distribution
+
+MariaDB [(none)]> CREATE USER 'mariabackup'@'localhost' IDENTIFIED BY 'mypassword';
+
+MariaDB [(none)]> GRANT RELOAD, PROCESS, LOCK TABLES, REPLICATION CLIENT ON *.* TO 'mariabackup'@'localhost';
+```
+
+* Fehlende Pakete installieren
+
+```bash
+$ sudo apt install socat mariadb-backup
+```
+Nach einem `sudo systemctl reload mariadb` wird nun wir einen SST statt `rsync` `mariabackup` verwendet.
