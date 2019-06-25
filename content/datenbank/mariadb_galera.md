@@ -5,7 +5,12 @@ tags:
   - datenbank
   - mariadb
 ---
+
 # Inhalt
+
+{{% toc /%}}
+
+
 Für viele Dienste und Anwendungen benötigt es eine Datenbank. Mit Hilfe von MySQL (bzw. dem Fork MariaDB) oder PostgreSQL lässt sich schnell etwas herbeischaffen und auch befüllen.\
 Leider steht und fällt vieles, wenn die Datenbank mal nicht zur Verfügung steht, daher ist es sinnvoll einen Datenbank Cluster zu konfigurieren, damit beim Ausfall von einer Node nicht alles steht.
 
