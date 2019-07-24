@@ -21,7 +21,7 @@ enableMissingTranslationPlaceholders = false
 paginate = 10
 
 [params]
-editURL = "https://github.com/pug.org/doc"
+editURL = "https://github.com/linuxmail/www.pug.org/edit/master/content/"
 showVisitedLinks = true # default is false
 themeStyle = "flex" # "original" or "flex" # default "flex"
 themeVariant = "" # choose theme variant "green", "gold" , "gray", "blue" (default)
