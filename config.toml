@@ -42,5 +42,17 @@ home = [ "HTML","JSON","RSS"]
 pre = "<h3>More</h3>"
 name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
 identifier = "ds"
-url = "https://github.com/"
+url = "https://github.com/linuxmail/www.pug.org/"
 weight = 10
+
+[[menu.shortcuts]]
+pre = "<h3>More</h3>"
+name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
+identifier = "ds"
+url = "https://github.com/linuxmail/www.pug.org/"
+weight = 10
+
+[[menu.shortcuts]]
+name = "<i class='fa fa-bullhorn'></i> <label>Impressum</label>"
+url = "/impressum"
+weight = 30
