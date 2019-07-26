@@ -2,7 +2,6 @@
 title: MariaDB Galera Cluster
 toc: true
 tags:
-  - datenbank
   - mariadb
 ---
 
