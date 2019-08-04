@@ -39,20 +39,18 @@ home = [ "HTML","JSON","RSS"]
 
 
 [[menu.shortcuts]]
-pre = "<h3>More</h3>"
+pre = "<h2>More</h2>"
 name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
-identifier = "ds"
+identifier = "Github"
 url = "https://github.com/linuxmail/www.pug.org/"
-weight = 10
 
 [[menu.shortcuts]]
 pre = "<h3>More</h3>"
-name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
-identifier = "ds"
-url = "https://github.com/linuxmail/www.pug.org/"
-weight = 10
+name = "<i class='fa wikipedia-w'></i> <label>MediaWiki Archiv</label>"
+identifier = "Wiki"
+url = "https://www.pug.org/archive/mediawiki/index.php/Startseite"
 
 [[menu.shortcuts]]
 name = "<i class='fa fa-bullhorn'></i> <label>Impressum</label>"
+identifier = "Impressum"
 url = "/impressum"
-weight = 30
