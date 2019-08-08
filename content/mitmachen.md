@@ -18,16 +18,17 @@ Die Webseite der Pug.org wird automatisch mit der Hilfe von [Hugo](https://hugo.
 
 {{<mermaid align="center">}}
     graph LR;
-    A[Repo klonen]-->|git clone| H
+    A[ 1. Repo klonen]
+    H -->|git clone| A
     A --> B
-    B[Neue Datei / Editieren] -->|testen| C(hugo server)
+    B[2. Neue Datei / Editieren] -->|testen| C(3. hugo server)
     C--> D{Sieht gut aus?}
     D-->|Ja| E[push to git]
     D-->|Nein| B
-    E[git commit] -->|git push| H
+    E[4. git commit] -->|5. git push| H
     H(www.github.com)
     G(www.pug.org)
-    G -->|git pull| H
+    H -->|6. git pull| G
 {{< /mermaid >}}
 
 Mit einigen Sätzen erläutert, sieht das vollständige Konstrukt so aus (Variante 2):\
