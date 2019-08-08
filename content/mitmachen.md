@@ -23,7 +23,7 @@ Die Webseite der Pug.org wird automatisch mit der Hilfe von [Hugo](https://hugo.
     B[Neue Datei / Editieren] -->|testen| C(hugo server)
     C--> D{Sieht gut aus?}
     D-->|Ja| E[push to git]
-    E-->|Nein| B
+    D-->|Nein| B
     E[git commit] -->|git push| H
     H(www.github.com)
     G(www.pug.org)
