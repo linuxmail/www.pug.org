@@ -947,6 +947,17 @@ root@office-ffm-srv-puppet:~# facter -p puppet_classes
 apt, apt::params, apt::update, default, settings
 ```
 
+## Weitere Puppet Module
+
+Es wird nicht ausbleiben weitere Puppet Module nach zu installieren. Dies kann entweder auf dem Puppet Master als User "puppet" getätigt werden, oder alternativ auf dem heimischen Rechner. Dabei bietet es sich an, ebenfalls den Puppet Agent (bzw. das "puppet" Kommando) zu installieren.\
+Als Beispiel ein paar Puppet Module, die mit Sicherheit sinnvoll sind:
+
+```bash
+denny@home:puppet$ for module in saz-sudo puppetlabs-ntp puppetlabs-concat camptocamp-augeas alexharvey-firewall_multi saz-ssh ; do puppet module install $module --modulepath environments/production/modules/; done
+```
+
+Danach müssen die neuen Verzeichnisse natürlich auch ins Git und eingecheckt werden.
+
 ## Ende
 
 Damit haben wir nun alle Voraussetzungen, um zum einen unsere Hosts mit Puppet zu konfigurieren, als auch später unser Monitoring mittels Icinga2 auf die Beine zu stellen.
