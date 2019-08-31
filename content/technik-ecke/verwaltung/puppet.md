@@ -890,6 +890,64 @@ root@office-ffm-srv-puppet:~# puppet agent -t --noop ; facter -p role
 srv
 ```
 
+Als nächstes bringen wir zwei weitere Facts in Spiel:
+
+* puppet_modules -> Listet alle Puppet Module auf, die für die Node verwendet werden
+* puppet_classes -> Listet alle Puppet Klassen auf, die für diese Node aufgerufen werden
+
+Damit ist es zum Beispiel möglich dem Icinga2 zu sagen: "Bitte führe die Service Checks für Nginx aus, wenn Nginx in puppet_classes auftaucht".
+
+Damit das klappt, erstellen wir in dem `facter` Ordner eine Datei:
+
+* puppet_classes.rb
+
+
+```ruby
+classes_file  = '/opt/puppetlabs/puppet/cache/state/classes.txt'
+classes_hash  = {}
+modules_array = []
+File.foreach(classes_file) do |l|
+  modules_array << l.chomp.gsub(/::.*/, '')
+end
+modules_array = modules_array.sort.uniq
+modules_array.each do |i|
+  classes_array = []
+  classes_array << i
+  File.foreach(classes_file) do |l|
+    classes_array << l.chomp if l =~ /^#{i}/
+      classes_array = classes_array.sort.uniq
+  end
+  classes_hash[i] = classes_array
+end
+
+Facter.add(
+  :puppet_modules) do
+  confine :kernel => 'Linux'
+  setcode do
+    modules_array.sort.uniq.join(', ').to_s
+  end
+  end
+Facter.add(
+  :puppet_classes) do
+  confine :kernel => 'Linux'
+  setcode do
+    classes_hash.map { |_k, v| v }.sort.uniq.join(', ').to_s
+  end
+  end
+```
+
+Wurde das ins Git eingecheckt und der Puppet Agent auf der Node (z.B. Puppet Master) ausgeführt, sind die zwei neuen Facts verfügbar.
+
+```bash
+root@office-ffm-srv-puppet:~# facter -p puppet_modules
+apt, default, settings
+```
+
+```bash
+root@office-ffm-srv-puppet:~# facter -p puppet_classes
+apt, apt::params, apt::update, default, settings
+```
+
 ## Ende
 
 Damit haben wir nun alle Voraussetzungen, um zum einen unsere Hosts mit Puppet zu konfigurieren, als auch später unser Monitoring mittels Icinga2 auf die Beine zu stellen.
