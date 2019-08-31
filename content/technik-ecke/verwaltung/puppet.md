@@ -772,12 +772,12 @@ Damit diese Facts vorhanden sind, benötigen wir ein eigenes Puppet Modul, welch
 ```bash
 denny@home:puppet$ mkdir -p environments/dev/modules/custom/lib/facter/
 ```
-
 In dem `facter` Ordner erzeugen wir zwei Dateien:
+
 * role.rb
 * datacenter.rb
 
-* **role.rb**
+Dateiinhalt von **role.rb:**
 
 ```ruby
 # Set the fact "role": facter -p role
@@ -810,7 +810,7 @@ else
 end
 ```
 
-* **datacenter.rb**
+Inhalt von **datacenter.rb:**
 
 ```ruby
 # Set fact for datacenter and rack
@@ -900,7 +900,6 @@ Damit ist es zum Beispiel möglich dem Icinga2 zu sagen: "Bitte führe die Servi
 Damit das klappt, erstellen wir in dem `facter` Ordner eine Datei:
 
 * puppet_classes.rb
-
 
 ```ruby
 classes_file  = '/opt/puppetlabs/puppet/cache/state/classes.txt'
