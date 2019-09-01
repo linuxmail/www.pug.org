@@ -958,6 +958,116 @@ denny@home:puppet$ for module in saz-sudo puppetlabs-ntp puppetlabs-concat campt
 
 Danach müssen die neuen Verzeichnisse natürlich auch ins Git und eingecheckt werden.
 
+## Profile
+
+Wurde Puppet in die Systemlandschaft integriert oder ist bestenfalls gerade dabei, empfiehlt es sich mit Profilen zu arbeiten. Sie dienen dazu bestimme Szenarien abzudecken, die mit Hiera allein nicht sinnvoll umsetzbar sind. Jeder Node erhält ein Standardprofil, welches z.B. NTP, SSH und Co. abdeckt. Später können weitere Profile  hinzukommen, um z.B. dafür zu sorgen, dass ein Webserver mit PHP bereitsteht, ohne beides separat auflisten zu müssen.
+Ein Beispiel:
+
+Base: **dev/modules/profile/manifests/base.pp**
+
+```ruby
+# source modules/profile/manifests/base.pp
+# == Class: profile::base
+class profile::base {
+
+  contain 'profile::base::sudo'
+  contain 'profile::base::ssh'
+
+  class { '::ntp':
+    servers => [ 'ptbtime1.ptb.de', 'ptbtime2.ptb.de', '1.rhel.pool.ntp.org'],
+  }
+
+  file { '/backup':
+    ensure => directory,
+    owner  => root,
+    group  => root,
+    mode   => '0750',
+  }
+
+  package { ['git', 'htop', 'screen' ]:
+    ensure =>  $ensure,
+  }
+}
+```
+
+sudo: **modules/profile/manifests/base/sudo.pp**
+
+```ruby
+# source modules/profile/manifests/base/sudo.pp
+# == Class: profile::base::sudo
+class profile::base::sudo {
+    include ::sudo
+
+    sudo::conf { 'admins':
+        priority => 10,
+        content  => '%admins ALL=(ALL) NOPASSWD: ALL',
+    }
+}
+```
+
+SSH: **modules/profile/manifests/base/ssh.pp**
+
+```ruby
+# source modules/profile/manifests/base/ssh.pp
+# == Class: profile::base
+class profile::base::ssh {
+
+  class { 'ssh':
+    storeconfigs_enabled => false,
+    validate_sshd_file   => true,
+    server_options => {
+      'Port'                    => [22],
+      'AddressFamily'           => 'inet',
+      'TCPKeepAlive'            => 'no',
+      'ClientAliveCountMax'     => '0',
+      'ClientAliveInterval'     => '900',
+      'Ciphers'                 => 'aes256-ctr,aes256-cbc,aes192-ctr,aes192-cbc,aes128-ctr,aes128-cbc',
+      'Macs'                    => 'hmac-sha2-512,hmac-sha2-256,hmac-sha1',
+      'DebianBanner'            => 'no',
+      'HostKey'                 => ['/etc/ssh/ssh_host_rsa_key','/etc/ssh/ssh_host_dsa_key','/etc/ssh/ssh_host_ecdsa_key',],
+      'AuthorizedKeysFile'      => '/etc/ssh/keys/%u .ssh/authorized_keys',
+      'KeyRegenerationInterval' => '3600',
+      'ServerKeyBits'           => '2048',
+      'UsePrivilegeSeparation'  => 'yes',
+      'LoginGraceTime'          => '120',
+      'PermitRootLogin'         => 'yes',
+      'StrictModes'             => 'yes',
+      'IgnoreRhosts'            => 'yes',
+      'RhostsRSAAuthentication' => 'no',
+      'HostbasedAuthentication' => 'no',
+      'PasswordAuthentication'  => 'no',
+      'UsePAM'                  => 'yes',
+      'X11Forwarding'           => 'no',
+      'X11DisplayOffset'        => '10',
+      'PrintMotd'               => 'no',
+      'PrintLastLog'            => 'yes',
+      'SyslogFacility'          => 'AUTH',
+      'LogLevel'                => 'VERBOSE',
+      'AcceptEnv'               => 'LANG LC_*',
+    },
+  }
+  # Set parameters for Yubikey
+  if ($yubiauth_host) {
+    ssh::server::config::setting { 'BaseClassChallenceResponse': key => 'ChallengeResponseAuthentication', value => 'yes' }
+    ssh::server::config::setting { 'BaseClassKeyboardInteractive': key => 'AuthenticationMethods', value => 'publickey,keyboard-interactive' }
+  } else {
+    ssh::server::config::setting { 'BaseClassChallenceResponse': key => 'ChallengeResponseAuthentication', value => 'no' }
+  }
+
+  # Set parameters for SFTP, used by X2Go
+  if ($::sshd_sftp_subsystem) {
+    ssh::server::config::setting { 'BaseClassSftp': key => 'Subsystem', value => 'sftp internal-sftp -l INFO' }
+  }
+}
+```
+
+Damit genügt es in die hieradata/common.eyaml als Kopf einzubinden:
+
+```yaml
+classes:
+  - 'profile::base'
+```
+
 ## Ende
 
 Damit haben wir nun alle Voraussetzungen, um zum einen unsere Hosts mit Puppet zu konfigurieren, als auch später unser Monitoring mittels Icinga2 auf die Beine zu stellen.
