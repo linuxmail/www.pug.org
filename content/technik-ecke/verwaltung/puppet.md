@@ -7,6 +7,7 @@ creatordisplayname: Denny Fuchs
 creatoremail: "linuxmail at 4 lin dot net"
 tags:
   - puppet
+  - debian
 ---
 
 # Puppet
@@ -15,7 +16,7 @@ tags:
 
 {{% toc %}}
 
-In diesem Artikel geht es nicht darum zu erläutern was Puppet ist oder kann, sondern wie es eingerichtet wird.\
+In diesem Artikel geht es nicht darum zu erläutern was Puppet ist oder kann, sondern wie es unter Debian (Buster) eingerichtet wird.\
 Wer wissen möchte, was Puppet ist, schaut am Besten hier vorbei: https://www.dev-insider.de/was-ist-puppet-a-720552/
 
 Es dient als Grundlage für die Icinga2 Installation und wie sie aktuell bei mir umgesetzt wurde. Das Ziel ist es, Puppet und Icinga2 zusammen zu bringen und eine (im Ansatz) automatisierte Monitorlösung zu haben. Werden also neue Hosts hinzugefügt und lässt sich mit einem Puppet Agent ausstatten, dann sollte dieser Host auch im Icinga2 auftauchen.\
@@ -170,7 +171,7 @@ root@office-ffm-srv-puppet:~# dpkg -i openjdk-8-jre-headless_8u222-b10-1~deb9u1_
 Dann werden wir nun den Puppetmaster zzgl. benötigter Tools installieren:
 
 ```bash
-root@office-ffm-srv-puppet:~# apt install puppetmaster augeas-tools
+root@office-ffm-srv-puppet:~# apt install dirmngr puppetmaster augeas-tools
 ```
 
 Puppetmaster wird sich beim Start 2GB Arbeitsspeicher nehmen, wer nicht so viel hat, muss an der passenden Schraube drehen. Wir wollen z.B: nur 512M dafür verwenden:
@@ -222,6 +223,7 @@ Im Anschluss kann der Puppetserver gestartet werden. Der Dienst benötigt meist 
 
 ```bash
 root@office-ffm-srv-puppet:~# service puppetserver start ; tail -F /var/log/puppetlabs/puppetserver/*.log
+root@office-ffm-srv-puppet:~# systemctl enable puppetserver
 ```
 
 Eventuell kann es sein, dass der Puppetserver sich kein zweites Mal starten lässt, wegen fehlender Berechtigungen für das SSL Verzeichnis und dem User "puppet". In diesem Fall wie oben angemerkt, das angegebene Verzeichnis korrigieren: 
@@ -300,6 +302,7 @@ Damit ist der PostgreSQL Teil abgeschlossen, folgt PuppetDB selbst:
 
 ```bash
 root@office-ffm-srv-puppet:~# apt install puppetdb puppetdb-termini
+root@office-ffm-srv-puppet:~# systemctl enable puppetdb
 ```
 Bei der Ersteinrichtung werden die SSL Zertifikate die zuvor von der Installation von Puppetserver bzw. puppet-agent erstellt worden sind, nach `/etc/puppetlabs/puppetdb/ssl` kopiert. Wurde zuerst puppetdb installiert oder eine neue CA aufgesetzt, kann das Setup mittels `puppetdb ssl-setup` erneut aufgerufen werden.\
 PuppetDB befüllt die Datenbank automatisch, es müssen lediglich die Daten für die Authentifizierung hinterlegt werden.
@@ -433,7 +436,7 @@ root@office-ffm-srv-puppet:~# service puppetserver restart
 
 Damit der Puppetmaster die Werte selbst wieder entschlüsseln kann, muss auch für ihn ein Schlüsselpaar erzeugt werden:
 
-{{% alert theme="warning" %}}**Um es einfach zu halten, wird der private Schlüssel ohne Passphrase erzeugt, da andernfalls bei jedem Neustart der gnupg-agent mit der Passphrase gestartet werden müsste. In einer "unsicheren" Umgrbung sollte dies angepasst werden.**{{% /alert %}}
+{{% alert theme="warning" %}}**Um es einfach zu halten, wird der private Schlüssel ohne Passphrase erzeugt, da andernfalls bei jedem Neustart der gnupg-agent mit der Passphrase gestartet werden müsste. In einer "unsicheren" Umgebung sollte dies angepasst werden.**{{% /alert %}}
 
 ```bash
 root@office-ffm-srv-puppet:~# apt install gpg2 -y
@@ -1067,6 +1070,61 @@ Damit genügt es in die hieradata/common.eyaml als Kopf einzubinden:
 classes:
   - 'profile::base'
 ```
+
+## Generischer Agent
+
+Da nun der Puppet Master soweit fertig ist, genügt nur noch den Puppet Agent zu installieren und die zu verwendende Umgebung zu hinterlegen:
+
+```bash
+# wget https://apt.puppetlabs.com/puppet6-release-buster.deb; dpkg -i puppet6-release-buster.deb && apt-get update
+# apt install dirmngr puppet-agent
+```
+
+**/etc/puppetlabs/puppet/puppet.conf** anpassen: 
+
+```ini
+[agent]
+report=false
+ca_server = office-ffm-srv-puppet.4lin.net
+server = office-ffm-srv-puppet.4lin.net
+environment = dev
+```
+
+Auch hier ist es wichtig, dass der Server gefunden wird. Also entweder die */etc/hosts* anpassen, oder ein funktionierendes DNS haben.
+
+Ein Beispiel:
+
+```bash
+root@office-ffm-master-01:~# puppet  agent -t --noop
+Info: Downloaded certificate for ca from office-ffm-srv-puppet.4lin.net
+Info: Downloaded certificate revocation list for ca from office-ffm-srv-puppet.4lin.net
+Info: Creating a new RSA SSL key for office-ffm-master-01.4lin.net
+Info: csr_attributes file loading from /etc/puppetlabs/puppet/csr_attributes.yaml
+Info: Creating a new SSL certificate request for office-ffm-master-01.4lin.net
+Info: Certificate Request fingerprint (SHA256): EB:34:4B:09:83:37:15:F2:25:E5:A5:59:19:3A:6F:CB:BA:BC:55:6B:97:4D:8C:43:35:D3:2D:08:60:0B:F3:3A
+Info: Certificate for office-ffm-master-01.4lin.net has not been signed yet
+Couldn't fetch certificate from CA server; you might still need to sign this agent's certificate (office-ffm-master-01.4lin.net).
+Exiting now because the waitforcert setting is set to 0.
+```
+
+Auf dem **Puppetmaster** müssen wir dann das Zertifikat unterschreiben:
+
+```bash
+# root@office-ffm-srv-puppet:~# puppetserver ca sign --certname office-ffm-master-01.4lin.net
+Successfully signed certificate request for office-ffm-master-01.4lin.net
+```
+
+Rufen wir nun den Agent auf unserer neuen Node auf (allerdings ohne den Schalter --noop) , holt dieser sich das unterschriebene Zertifikat und fängt an alles abzuarbeiten.
+
+Sollte die Meldung:
+
+```
+Error: Could not find a suitable provider for apt_key
+```
+
+auftauchen, liegt es daran, dass das Paket *dirmngr* nicht installiert ist. Eigentlich sollte Puppet das Paket installieren, aber da wir alle Quellen zuerst wegwerfen, gibt es da ein Henne-Ei Problem.
+
+Ist alles durchgelaufen, haben wir nun die erste Node neben dem Puppetmaster und das Finetuning kann beginnen :-)
 
 ## Ende
 
