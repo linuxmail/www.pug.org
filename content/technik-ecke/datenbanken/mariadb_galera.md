@@ -130,7 +130,6 @@ max_allowed_packet = 16M
 datadir=/opt/mariadb/mysql
 tmpdir=/opt/mariadb/tmp
 
-[galera]
 binlog_format=ROW
 default-storage-engine=innodb
 innodb_autoinc_lock_mode=2
@@ -139,6 +138,7 @@ query_cache_type=0
 innodb_flush_log_at_trx_commit=0
 innodb_buffer_pool_size=256M
 
+[galera]
 # Galera settings
 wsrep_on=ON
 wsrep_provider=/usr/lib64/galera/libgalera_smm.so
@@ -245,3 +245,11 @@ MariaDB [(none)]> GRANT RELOAD, PROCESS, LOCK TABLES, REPLICATION CLIENT ON *.* 
 $ sudo apt install socat mariadb-backup
 ```
 Nach einem `sudo systemctl reload mariadb` wird nun wir einen SST statt `rsync` `mariabackup` verwendet.
+
+### Health
+
+Um den Status des Clusters zu prüfen, eignet sich folgendes Kommando:
+
+```sql
+MariaDB [(none)]> SHOW GLOBAL STATUS LIKE 'wsrep_%';
+```
