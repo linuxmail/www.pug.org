@@ -13,7 +13,14 @@ tags:
 
 In dieser Anleitung wird **ein** Vorschlag unterbreitet, wie ein [Icinga2](https://icinga.com/docs/icinga2/latest/doc/01-about/) Cluster in Kombination mit [Icingaweb2](https://github.com/Icinga/icingaweb2) und Puppet installiert betrieben werden kann.\
 
-{{% alert theme="warning" %}}Diese Anleitung wird größer als gedacht und enthält noch nicht den HA Teil, der aber demnächst nachgereicht wird. Des weiteren wird er fortlaufend verbessert.{{% /alert %}}
+{{% alert theme="warning" %}}Diese Anleitung wird größer als gedacht und enthält noch nicht den HA Teil, der aber demnächst nachgereicht wird.{{% /alert %}}
+
+* **Was fehlt:**
+  - HA mit Keepalived
+  - Satellit für weitere Zone    
+
+Es empfiehlt sich erst einmal alles zu überfliegen, um sich einen Überblick zu verschaffen. Eventuell ist auch nicht das ganze Paket interessant, sondern nur Auszüge daraus.\
+Aufgrund der Länge werde ich die Anleitung etwas aufteilen, wenn alles soweit enthalten ist.
 
 ## Zwei Konzepte
 
@@ -249,6 +256,7 @@ Wir schmeißen im Grunde die Standardkonfiguration weg und erzeugen sie neu. Die
 
 * **environments/dev/modules/profile/manifests/icinga2/master.pp**
 
+{{%expand "Inhalt zeigen" %}}
 ```puppet
 class profile::icinga2::master (
   $icinga_db_host = hiera('monitoring::mysql::ipaddress'),
@@ -392,12 +400,14 @@ file { [
     }
 }
 ```
+{{% /expand%}}
 
 * **environments/dev/modules/profile/manifests/icinga2/applyrules.pp**
 
 Die Apply Regeln werden als Dateien gepflegt, da dies sehr viel einfacher und pflegeleichter ist, als sie zu exportieren.\
 Ein Auszug:
 
+{{%expand "Inhalt zeigen" %}}
 ```puppet
 # This class is for service checks and apply rules
 class profile::icinga2::applyrules {
@@ -458,6 +468,7 @@ class profile::icinga2::applyrules {
   }
 }
 ```
+{{% /expand%}}
 
 Die Dateien liegen in einem **anderen Ordner** und kann bei Bedarf natürlich geändert werden.\
 Alle "reinen" (also nicht Puppet Dateien) Icinga2 Dateien, Plugins, Scripte und Co. landen bei mir in **modules/icinga2_checks/**
@@ -488,6 +499,7 @@ apply Service "apt" {
 
 Beispiel für service_check_linux_base.conf:
 
+{{%expand "Inhalt zeigen" %}}
 ```
 # Mangaged by puppet
 # modules/icinga2_files/files/applyrules/service_check_linux_base.conf
@@ -574,11 +586,13 @@ apply Service "users" {
     assign where host.vars.os == "Linux"
 }
 ```
+{{% /expand%}}
 
 * **profile/manifests/icinga2/checkcommands.pp**
 
 Hier hinterlegen wir die Kommandos. Historisch bedingt tatsächlich als Puppet Objekte. Auch hier wäre die ÜBerlegung wert, sie als reine Icinga2 Dateien zu hinterlegen. Diese Datei ist sehr umfangreich und sollte auf jeden Fall entschlackt werden. Allerdings hilft es dem einen oder anderen anhand der Syntax zu entnehmen, wie ich etwas umgesetzt habe.
 
+{{%expand "Inhalt zeigen" %}}
 ```
 # Custom checkcommands and may overwrites
 class profile::icinga2::checkcommands {
@@ -1961,6 +1975,7 @@ class profile::icinga2::checkcommands {
   }
 }
 ```
+{{% /expand%}}
 
 * **profile/manifests/icinga2/notifications.pp**
 
@@ -2042,6 +2057,7 @@ In meinem Fall bekommt der Master ein anderes Plugin Verzeichnis, als der Agent,
 
 * **profile/manifests/icinga2/plugins.pp**
 
+{{%expand "Inhalt zeigen" %}}
 ```
 # Install the Icinga monitoring plugins
 class profile::icinga2::plugins (
@@ -2245,6 +2261,7 @@ class profile::icinga2::plugins (
   }
 }
 ```
+{{% /expand%}}
 
 ##### Sudo
 
@@ -2282,6 +2299,7 @@ Beim Agent wurde am meisten gegrübelt, da die Anforderungen sich stetig ändert
 * *jumper* = Eigentlich ein Jumphost, aber dieser ist auch für die Zone MGMT zuständig. **Im Manifest ist dies jumper-02**
 * **profile/manifests/icinga2/agent.pp**
 
+{{%expand "Inhalt zeigen" %}}
 ```puppet
 # For all non-master hosts
 # source: profile/manifests/icinga2/agent.pp
@@ -2383,6 +2401,7 @@ class profile::icinga2::agent(
   }
 }
 ```
+{{% /expand%}}
 
 ### Icingaweb2
 
@@ -2392,9 +2411,9 @@ Icingaweb2 wird ebenfalls auf dem Master installiert, daher haben wir auch dafü
 
 {{% alert theme="warning" %}}Ab Icingaweb2 Director Modul v1.7, werden drei weitere Module benötigt, für die noch kein [Puppet Rezept existiert](https://github.com/Icinga/puppet-icingaweb2/issues/247). Dies wird hier noch aufgeführt, bis es eine offizielle Lösung für puppet-icingaweb2 gibt. {{% /alert %}}
 
-
 * **dev/modules/profile/manifests/icinga2/icingaweb2.pp**
-
+ 
+{{%expand "Inhalt zeigen" %}}
 ```puppet
 # Install Icingaweb and setup all the basics.
 class profile::icinga2::icingaweb2 (
@@ -2512,6 +2531,7 @@ class profile::icinga2::icingaweb2 (
   }
 }
 ```
+{{% /expand%}}
 
 ### Hiera
 
@@ -2531,6 +2551,7 @@ Es gibt drei Orte die zum Einsatz kommen:
 
 Fangen wir wir mit der `hieradata/common.eyaml` an. Alles mit **secret** muss natürlich durch eigene Kennwörter getauscht werden. Die monitoring Schlüssel sind sozusagen übergeordnet, da sie nicht nur bei Icinga2 zum Einsatz kommen, sondern auch noch für z.B. Grafana oder ähnliches. Ist aber reine Geschmackssache.
 
+{{%expand "Inhalt zeigen" %}}
 ```yaml
 # Common class
 ---
@@ -2579,6 +2600,7 @@ icingaweb2_director::mysql_password: DEC::GPG[secret]!
 icingaweb2_x509::mysql_password: DEC::GPG[secret]!
 icingaweb2::mysql_password: DEC::GPG[secret]!
 ```
+{{% /expand%}}
 
 Die `hieradata/role/master.yaml` beinhaltet alles für die Master Nodes:
 * Icinga2 selbst
@@ -2589,6 +2611,7 @@ Die `hieradata/role/master.yaml` beinhaltet alles für die Master Nodes:
     - PHP
 * Icingaweb2
 
+{{%expand "Inhalt zeigen" %}}
 ```yaml
 ---
 # Basics
@@ -2811,6 +2834,7 @@ apache::vhost:
 #      path: '/'
 #      url:  'http://127.0.0.1:8005/'
 ```
+{{% /expand%}}
 
 * **profile/dev/hieradata/node/office-ffm-master-01.4lin.net.eyaml**
 
