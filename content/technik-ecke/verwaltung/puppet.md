@@ -803,6 +803,14 @@ elsif Facter.value(:hostname) =~ /^([a-z]+)$/
   end
   end
 
+# ([a-z]+), i.e. office-ffm-master-01 or office-ffm-ntp-01 have a role of master or ntp
+elsif Facter.value(:hostname) =~ /^([a-z]+)-([a-z]+)-([a-z]+)-([0-9]+)$/
+  Facter.add('role') do
+  setcode do
+    $3
+  end
+  end
+
 # Set to hostname if no patterns match
 else
   Facter.add('role') do
@@ -976,10 +984,6 @@ class profile::base {
   contain 'profile::base::sudo'
   contain 'profile::base::ssh'
 
-  class { '::ntp':
-    servers => [ 'ptbtime1.ptb.de', 'ptbtime2.ptb.de', '1.rhel.pool.ntp.org'],
-  }
-
   file { '/backup':
     ensure => directory,
     owner  => root,
@@ -987,7 +991,7 @@ class profile::base {
     mode   => '0750',
   }
 
-  package { ['git', 'htop', 'screen' ]:
+  package { ['git', 'htop', 'tmux' ]:
     ensure =>  $ensure,
   }
 }
