@@ -40,7 +40,7 @@ home = [ "HTML","JSON","RSS"]
 
 [[menu.shortcuts]]
 pre = "<h2>More</h2>"
-name = "<i class='fa fa-github'></i> <label>Gitlab repo</label>"
+name = "<i class='fa fa-github'></i> <label>Github repo</label>"
 identifier = "Github"
 url = "https://github.com/linuxmail/www.pug.org/"
 
