@@ -13,7 +13,7 @@ Bei uns ist jeder willkommen und darf z.B. an unserer Mailingliste teilnehmen, a
 # PUG Dokumentation
 
 Bisher wurden alle Anleitungen in unserem [MediaWiki](https://www.mediawiki.org/wiki/MediaWiki) verfasst, aber da die Pflege keinen Spaß macht, erstellen wir die Anleitungen nun in der MarkDown Syntax und lassen sie mittels Hugo in eine statische Seite umwandeln. Dies hat den Vorteil, dass das Laden der Seiten erheblich schneller von statten geht; die Angriffsfläche erheblich verringert wird und die gesamte Dokumentation liegt im Git.\
-Da es zu aufwendig wäre jede Seite zu konvertieren, wurde das alte MediaWiki archiviert und verschoben: https://www.pug.org/archiv/mediawiki/index.php/Startseite . Der Webserver wurde angewiesen, alle Links korrekt dahin umzuleiten, sodass Verknüpfungen in Anleitungen, PDFs etc. nach wie vor funktionieren.
+Da es zu aufwendig wäre jede Seite zu konvertieren, wurde das alte MediaWiki archiviert und verschoben: https://www.pug.org/archive/mediawiki/index.php/Startseite . Der Webserver wurde angewiesen, alle Links korrekt dahin umzuleiten, sodass Verknüpfungen in Anleitungen, PDFs etc. nach wie vor funktionieren.
 
 # Historie
 
